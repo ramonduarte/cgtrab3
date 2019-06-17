@@ -1,0 +1,21 @@
+Etapas:
+    Preparação:
+        ✔ Definir a tech stack @critical @done (6/17/2019, 6:39:47 PM)
+        ☐ Definir objetos
+        ☐ Esfera do arcball @critical 
+        ✔ Instalar as dependências @done (6/17/2019, 6:39:59 PM)
+    Manipulação de objetos:
+        ☐ seleção por clique simples @high 
+        ☐ Seleção por clique no fundo @high 
+        ☐ Seleção de grupos não completos
+        ☐ Rotacionar objetos individualmente @high 
+        ☐ Rotacionar grupos @high 
+        ☐ Transladar objetos com o arraste de mouse
+    Visualização:
+        ✔ Cenário 3D @done (6/17/2019, 6:40:45 PM)
+        ☐ Utilizar arcballs @critical 
+        ☐ Esfera transparente sobre objetos selecionados @high 
+        ✔ Aproximar e afastar objetos com a rodinha do mouse @done (6/17/2019, 6:40:16 PM)
+    Interação:
+        ☐ Duplo clique troca entre modos de rotação e translação
+
