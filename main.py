@@ -4,6 +4,8 @@ from typing import Tuple
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *
+
 
 vertices= (
     (1, -1, -1),
@@ -63,6 +65,8 @@ class Cube(object):
 
 
     def draw(self) -> bool:
+        glEnable(GL_DEPTH_TEST)
+        glDepthFunc(GL_LESS)
         try:
             glBegin(GL_LINES)
             for edge in edges:
@@ -80,6 +84,8 @@ class Cube(object):
 
 
 if __name__ == "__main__":
+    glutInit()
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH)
     pygame.init()
     display = (800,600)
     pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
@@ -99,7 +105,7 @@ if __name__ == "__main__":
                     # glScalef(2.0,2.0,1.0)
                     glTranslatef(0.0,0.0,1)
         # glRotatef(1, 3, 1, 1)
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         cube.draw()
         pygame.display.flip()
         pygame.time.wait(10)
