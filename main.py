@@ -32,13 +32,35 @@ edges = (
     )
 
 
+## GLOBAL VARIABLES
+cubes = {}
+# id_seed = 0
+
+
+## CLASSES & METHODS
 class Cube(object):
     vertices: Tuple[tuple]
     edges: Tuple[tuple]
+    # id: int
+    red: int
+    green: int
+    blue: int
 
     def __init__(self, edges, vertices):
         self.edges = edges
         self.vertices = vertices
+        # self.id = id_seed
+        # self.red = (self.id & 0x000000FF) >>  0
+        # self.green = (self.id & 0x0000FF00) >>  8
+        # self.blue = (self.id & 0x00FF0000) >> 16
+        self.red = (id(self) & 0x000000FF) >>  0
+        self.green = (id(self) & 0x0000FF00) >>  8
+        self.blue = (id(self) & 0x00FF0000) >> 16
+        # id_seed += 1
+
+        # cubes[(self.red, self.green, self.blue)] = self.id
+        cubes[(self.red, self.green, self.blue)] = self
+
 
     def draw(self) -> bool:
         try:
@@ -51,6 +73,10 @@ class Cube(object):
         except Exception:
             traceback.print_exc()
             return False
+
+    @staticmethod
+    def get_cube_by_color(red, green, blue):
+        return cubes.get((red, green, blue))
 
 
 if __name__ == "__main__":
