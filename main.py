@@ -35,7 +35,7 @@ edges = (
 
 
 ## GLOBAL VARIABLES
-cubes = {}
+cubes = {(0, 0, 0): None}
 # id_seed = 0
 
 
@@ -68,11 +68,40 @@ class Cube(object):
         glEnable(GL_DEPTH_TEST)
         glDepthFunc(GL_LESS)
         try:
-            glBegin(GL_LINES)
-            for edge in edges:
-                for vertex in edge:
-                    glVertex3fv(vertices[vertex])
-            glEnd()
+            # # old_color = ()
+            # # glGetFloatv(GL_COLOR, old_color)
+            # glBegin(GL_TRIANGLES)
+            # glColor3f(self.red / 255.0, self.green / 255.0, self.blue / 255.0)
+            # for edge in edges:
+            #     for vertex in edge:
+            #         glVertex3fv(vertices[vertex])
+            # glEnd()
+
+            # glBegin(GL_LINES)
+            # glColor3f(0.0, 0.0, 0.0)
+            # glLineWidth(10)
+            # for edge in edges:
+            #     for vertex in edge:
+            #         glVertex3fv(vertices[vertex])
+            # glEnd()
+            # # glColor4fv(old_color)
+
+            glPushMatrix()
+            glColor4f(0.0, 0.0, 0.0, 1.0)
+            glutWireCube(1)
+            glPopMatrix()
+
+            glPushMatrix()
+            glColor4f(self.red / 255.0, self.green / 255.0, self.blue / 255.0, 0.5)
+            # glMaterialfv(GL_FRONT,GL_DIFFUSE,matCol)
+            glutSolidCube(1)
+            glPopMatrix()
+
+            # glPushMatrix()
+            # glColor4f(50.0, 50.0, 50.0, 0.1)
+            # glutSolidSphere(1)
+            # glPopMatrix()
+            # glFlush()
             return True
         except Exception:
             traceback.print_exc()
@@ -88,8 +117,8 @@ if __name__ == "__main__":
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH)
     pygame.init()
     display = (800,600)
-    pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
-    gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
+    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+    gluPerspective(45, (display[0]/display[1]), 0.1, 500.0)
     glTranslatef(0.0,0.0,-5)
     cube = Cube(edges, vertices)
     while True:
@@ -104,6 +133,11 @@ if __name__ == "__main__":
                 elif event.button == 5:   
                     # glScalef(2.0,2.0,1.0)
                     glTranslatef(0.0,0.0,1)
+                elif event.button == 1:
+                    a = ""
+                    position = pygame.mouse.get_pos()
+                    a = glReadPixels(*position, 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
+                    print(cubes[(a[0], a[1], a[2])])
         # glRotatef(1, 3, 1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         cube.draw()
