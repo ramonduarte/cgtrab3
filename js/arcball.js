@@ -71,6 +71,7 @@ window.onload = setTimeout(function() {
 					return false;
 				} else {
 					dragItem = objectHit;
+					// renderer.render(scene, camera);
 					render();
 					return true;
 				}
@@ -81,12 +82,14 @@ window.onload = setTimeout(function() {
 					var coords = new THREE.Vector3(locationX, 0, locationZ);
 					cube.worldToLocal(coords); // to add cylider in correct position, neew local coords for the world object
 					addCylinder(coords.x, coords.z);
+					// renderer.render(scene, camera);
 					render();
 				}
 				return false;
 			default: // DELETE
 				if (objectHit != sphere) {
 					cube.remove(objectHit);
+					// renderer.render(scene, camera);
 					render();
 				}
 				return false;
@@ -96,8 +99,11 @@ window.onload = setTimeout(function() {
 	function doMouseMove(x, y, event, prevX, prevY) {
 		if (mouseAction == ROTATE) {
 			var dx = x - prevX;
+			var dy = y - prevY;
 			cube.rotateY(dx / 200);
-			render();
+			cube.rotateX(dy / 200);
+			renderer.render(scene, camera);
+			// render();
 		} else { // drag
 			var a = 2 * x / document.body.width - 1;
 			var b = 1 - 2 * y / document.body.height;
@@ -113,7 +119,8 @@ window.onload = setTimeout(function() {
 			a = Math.min(19, Math.max(-19, coords.x)); // clamp coords to the range -19 to 19, so object stays on ground
 			b = Math.min(19, Math.max(-19, coords.z));
 			dragItem.position.set(a, 3, b);
-			render();
+			renderer.render(scene, camera);
+			// render();
 		}
     }
     
@@ -277,12 +284,14 @@ window.onload = setTimeout(function() {
 
     // Firing it up
     var scene = new THREE.Scene();
+    // // scene.background = new THREE.Color(0xff0000);
     var mouse = new THREE.Vector3( 0, 0, 0.5);
     var mousePrevious = new THREE.Vector3( 0, 0, 0.5);
     var raycaster = new THREE.Raycaster();
     try {
-        var renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize( window.innerWidth, window.innerHeight );
+        var renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+        // renderer.setClearColor( 0xffff00, 0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
     } catch (e) {
         document.body.innerHTML = "<p><b>Sorry, an error occurred:<br>" +
@@ -313,29 +322,33 @@ window.onload = setTimeout(function() {
     setUpMouseHander(document.body, doMouseDown, doMouseMove);
     setUpTouchHander(document.body, doMouseDown, doMouseMove);
     // document.addEventListener('mousedown', onDocumentMouseDown, false);
-    document.addEventListener('mouseup', rotateObject, false);
-    document.addEventListener("mousedown", function(){ flag = 0; }, false);
-    document.addEventListener("mousemove", function(){ flag = 1; }, false);
+    // document.addEventListener('mouseup', rotateObject, false);
+    // document.addEventListener("mousedown", function(){ flag = 0; }, false);
+    // document.addEventListener("mousemove", function(){ flag = 1; }, false);
 
     // CUBE
-    var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-    var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-    var cube = new THREE.Mesh( geometry, material );
+    var geometry = new THREE.BoxGeometry(1, 1, 1);
+    // var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+    var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
+    var mesh = new THREE.Mesh(geometry, material);
+    var cube = new THREE.Group();
+    cube.add(mesh);
 
     // CUBE LINES
     var lineMaterial = new THREE.LineBasicMaterial({color: 0x000000, transparent: true, opacity: 1.0});
-    var lines = new THREE.LineSegments( geometry, lineMaterial )
+    var lines = new THREE.LineSegments(geometry, lineMaterial)
+    cube.add(lines);
 
     // SPHERE
-    var sphereGeometry = new THREE.SphereGeometry( 1, 32, 32 );
-    var sphereMaterial = new THREE.MeshBasicMaterial( {color: 0xffff00, transparent: true, opacity: 0.2} );
-    var sphere = new THREE.Mesh( sphereGeometry, sphereMaterial );
+    var sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+    var sphereMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, transparent: true, opacity: 0.2});
+    var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 
     // Building the scene
     scene.add(cube);
     scene.add(lines);
-    scene.add(sphere);
-    scene.add(new THREE.DirectionalLight(0xffffff, 0.5));
+    // scene.add(sphere);
+    // scene.add(new THREE.DirectionalLight(0x0000ff, 1));
     camera.position.z = 5;
 
     var animate = function () {
