@@ -30,15 +30,20 @@ window.onload = setTimeout(function() {
         }
     }
 
-    function rotateObject(event) {
+    function translateObject(event) {
         event.preventDefault();
         switch (event.which) {
             case 1: // left mouse click
                 mouse.x = (event.clientX/window.innerWidth) * 2 - 1;
                 mouse.y = -(event.clientY/window.innerHeight) * 2 + 1;
 
-                cube.rotation.x += (mousePrevious.x - mouse.x);
-                cube.rotation.y += (mousePrevious.y - mouse.y);
+                // TODO: this is just a quick patch 2019-06-21 21:52:13
+                var dx = event.clientX - mousePrevious.x;
+                var dy = event.clientY - mousePrevious.y;
+                cube.translateY(dx);
+                cube.translateX(dy);
+                renderer.render(scene, camera);
+                mousePrevious.copy(mouse);
 
                 mousePrevious.copy(mouse);
                 console.log("botão esquerdo");
@@ -55,44 +60,27 @@ window.onload = setTimeout(function() {
 	function doMouseDown(x, y) {
 		if (mouseAction == ROTATE) {
 			return true;
-		}
+        }
+
 		var a = 2 * x / document.body.width - 1;
 		var b = 1 - 2 * y / document.body.height;
 		raycaster.setFromCamera(new THREE.Vector2(a, b), camera);
-		intersects = raycaster.intersectObjects(cube); // no need for recusion since all objects are top-level
+		intersects = raycaster.intersectObjects(cube.children);
 		if (intersects.length == 0) {
 			return false;
-		}
+        }
+
 		var item = intersects[0];
-		var objectHit = item.object;
-		switch (mouseAction) {
-			case DRAG:
+        var objectHit = item.object;
+        if (mouseAction == DRAG) {
 				if (objectHit == sphere) {
 					return false;
 				} else {
 					dragItem = objectHit;
-					// renderer.render(scene, camera);
-					render();
+					renderer.render(scene, camera);
+					// render();
 					return true;
 				}
-			case ADD:
-				if (objectHit == sphere) {
-					var locationX = item.point.x; // Gives the point of intersection in world coords
-					var locationZ = item.point.z;
-					var coords = new THREE.Vector3(locationX, 0, locationZ);
-					cube.worldToLocal(coords); // to add cylider in correct position, neew local coords for the world object
-					addCylinder(coords.x, coords.z);
-					// renderer.render(scene, camera);
-					render();
-				}
-				return false;
-			default: // DELETE
-				if (objectHit != sphere) {
-					cube.remove(objectHit);
-					// renderer.render(scene, camera);
-					render();
-				}
-				return false;
 		}
 	}
 
@@ -104,7 +92,17 @@ window.onload = setTimeout(function() {
 			cube.rotateX(dy / 200);
 			renderer.render(scene, camera);
 			// render();
-		} else { // drag
+        } else { // drag
+            console.log("dragging");
+
+            // TODO: this is just a quick patch 2019-06-21 21:52:13
+            var dx = x - prevX;
+			var dy = y - prevY;
+			cube.translateY(-dy / 200);
+			cube.translateX(dx / 200);
+            renderer.render(scene, camera);
+            return;
+            
 			var a = 2 * x / document.body.width - 1;
 			var b = 1 - 2 * y / document.body.height;
 			raycaster.setFromCamera(new THREE.Vector2(a, b), camera);
@@ -126,14 +124,17 @@ window.onload = setTimeout(function() {
     
     function doChangeMouseAction() {
 		if (document.getElementById("mouseRotate").checked) {
-			mouseAction = ROTATE;
+            mouseAction = ROTATE;
+            
 		} else if (document.getElementById("mouseDrag").checked) {
-			mouseAction = DRAG;
-		} else if (document.getElementById("mouseAdd").checked) {
-			mouseAction = ADD;
-		} else {
-			mouseAction = DELETE;
-		}
+            mouseAction = DRAG;
+            console.log(mouseAction);
+        }
+		// } else if (document.getElementById("mouseAdd").checked) {
+		// 	mouseAction = ADD;
+		// } else {
+		// 	mouseAction = DELETE;
+		// }
     }
     
     function setUpMouseHander(element, mouseDownFunc, mouseDragFunc, mouseUpFunc) {
@@ -307,31 +308,33 @@ window.onload = setTimeout(function() {
     orbit.enableRotate = false;
 
     // Event handlers
-    var flag = 0;
+    // var flag = 0;
     var ROTATE = 1;
     var DRAG = 2;
-	var ADD = 3;
-	var DELETE = 4;
-    var mouseAction = DRAG;
+	// var ADD = 3;
+	// var DELETE = 4;
+    var mouseAction = ROTATE;
 
-    document.getElementById("mouseDrag").checked = true;
+    document.getElementById("mouseRotate").checked = true;
     document.getElementById("mouseRotate").onchange = doChangeMouseAction;
     document.getElementById("mouseDrag").onchange = doChangeMouseAction;
-    document.getElementById("mouseAdd").onchange = doChangeMouseAction;
-    document.getElementById("mouseDelete").onchange = doChangeMouseAction;
+    // document.getElementById("mouseAdd").onchange = doChangeMouseAction;
+    // document.getElementById("mouseDelete").onchange = doChangeMouseAction;
     setUpMouseHander(document.body, doMouseDown, doMouseMove);
     setUpTouchHander(document.body, doMouseDown, doMouseMove);
     // document.addEventListener('mousedown', onDocumentMouseDown, false);
-    // document.addEventListener('mouseup', rotateObject, false);
+    // document.addEventListener('mouseup', translateObject, false);
     // document.addEventListener("mousedown", function(){ flag = 0; }, false);
     // document.addEventListener("mousemove", function(){ flag = 1; }, false);
 
     // CUBE
     var geometry = new THREE.BoxGeometry(1, 1, 1);
-    // var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-    var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
+    var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+    material.shadowSide = THREE.DoubleSide;
+    // var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
     var mesh = new THREE.Mesh(geometry, material);
-    var cube = new THREE.Group();
+    // var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( {color:"yellow"}));
+    var cube = new THREE.Object3D();
     cube.add(mesh);
 
     // CUBE LINES
@@ -346,7 +349,7 @@ window.onload = setTimeout(function() {
 
     // Building the scene
     scene.add(cube);
-    scene.add(lines);
+    // scene.add(lines);
     // scene.add(sphere);
     // scene.add(new THREE.DirectionalLight(0x0000ff, 1));
     camera.position.z = 5;
