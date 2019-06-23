@@ -1,41 +1,8 @@
 window.onload = setTimeout(function() {
-    function onDocumentMouseDown(event) {
-        event.preventDefault();
-        switch (event.which) {
-            case 1: // left mouse click
-                mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-                mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-                mouse.unproject( camera );
-
-                // projector.unproject(vector, camera);
-
-                var ray = new THREE.Raycaster(camera.position, 
-                                        mouse.sub(camera.position).normalize());
-
-                var intersects = ray.intersectObjects(scene.children);
-
-                if (intersects.length > 0) {
-                    intersects[0].object.materials[0].color.setHex(Math.random() * 0xffffff);
-                    var particle = new THREE.Particle(particleMaterial);
-                    particle.position = intersects[0].point;
-                    particle.scale.x = particle.scale.y = 8;
-                    scene.add(particle);
-
-                    console.log(mouse);
-                }
-                break;
-            
-            default:
-                break;
-        }
-    }
-
     function translateObject(event) {
         event.preventDefault();
         switch (event.which) {
-            case 1: // left mouse click
-                mouse.x = (event.clientX/window.innerWidth) * 2 - 1;
-                mouse.y = -(event.clientY/window.innerHeight) * 2 + 1;
+            case 1: // left click
 
                 // TODO: this is just a quick patch 2019-06-21 21:52:13
                 var dx = event.clientX - mousePrevious.x;
@@ -45,8 +12,29 @@ window.onload = setTimeout(function() {
                 renderer.render(scene, camera);
                 mousePrevious.copy(mouse);
 
+                return;
+
+                var a = 2 * event.x / document.body.width - 1;
+                var b = 1 - 2 * event.y / document.body.height;
+                cube.updateMatrixWorld()
+                // raycaster.setFromCamera(new THREE.Vector2(a, b), camera);
+                raycaster.setFromCamera(new THREE.Vector2(event.x, event.y), camera);
+                intersects = raycaster.intersectObject(cube);
+                if (intersects.length == 0) {
+                    console.log(intersects);
+                    return false;
+                }
+                var item = intersects[0];
+                var objectHit = item.object;
+
+                mouse.x = event.clientX;
+                mouse.y = event.clientY;
+
+                cube.translateX(-(mousePrevious.x - mouse.x)/200);
+                cube.translateY((mousePrevious.y - mouse.y)/200);
+
                 mousePrevious.copy(mouse);
-                console.log("botão esquerdo");
+                console.log(mousePrevious, mouse);
                 
                 break;
             
@@ -56,85 +44,92 @@ window.onload = setTimeout(function() {
         
     }
 
-
 	function doMouseDown(x, y) {
 		if (mouseAction == ROTATE) {
 			return true;
         }
+        if (targetForDragging.parent == scene) {
+			scene.remove(targetForDragging);  // I don't want to check for hits on targetForDragging
+		}
 
 		var a = 2 * x / document.body.width - 1;
 		var b = 1 - 2 * y / document.body.height;
+        var raycaster = new THREE.Raycaster();
 		raycaster.setFromCamera(new THREE.Vector2(a, b), camera);
-		intersects = raycaster.intersectObjects(cube.children);
+		intersects = raycaster.intersectObjects(scene.children);
 		if (intersects.length == 0) {
 			return false;
         }
 
 		var item = intersects[0];
         var objectHit = item.object;
-        if (mouseAction == DRAG) {
-				if (objectHit == sphere) {
-					return false;
-				} else {
-					dragItem = objectHit;
-					renderer.render(scene, camera);
-					// render();
-					return true;
-				}
-		}
+        // if (objectHit == sphere) {
+        if (objectHit == null) {
+            return false;
+        } else {
+            dragItem = objectHit;
+            scene.add(targetForDragging);
+            targetForDragging.position.set(0, item.point.y, 0);
+            renderer.render(scene, camera);
+            return true;
+        }
 	}
 
 	function doMouseMove(x, y, event, prevX, prevY) {
+        var a = 2 * x / document.body.width - 1;
+        var b = 1 - 2 * y / document.body.height;
+        // projector.unprojectVector(new THREE.Vector3(a, b, 1), camera);
+        // var raycaster = new THREE.Raycaster(camera.position,
+                                            // new THREE.Vector3(x, y, 1)
+                                            // .sub(camera.position).normalize());
+        // var raycaster = new THREE.Raycaster(new THREE.Vector3(x, y, 0.5),
+                                            // camera.position);
+        var raycaster = new THREE.Raycaster();
+
+        raycaster.setFromCamera(new THREE.Vector3(x, y, 0.5), camera);
+        // intersects = raycaster.intersectObjects(solids.children);
+        scene.updateMatrixWorld(true);
+        // intersects = raycaster.intersectObjects(cube.children);
+        intersects = raycaster.intersectObject(targetForDragging);
+        if (intersects.length == 0) {
+            // console.log("intersect empty: ", solids);
+            console.log("intersect empty: ", mesh);
+            console.log(x, y);
+            console.log(camera.position);
+            
+            return;
+        } else {console.log("intersect got smth", intersects);}
+        var locationX = intersects[0].point.x;
+        var locationY = intersects[0].point.y;
+        var coords = new THREE.Vector3(locationX, locationY, 0);
+        scene.worldToLocal(coords);
+        // a = Math.min(19, Math.max(-19, coords.x)); // clamp coords to the range -19 to 19, so object stays on ground
+        // b = Math.min(19, Math.max(-19, coords.z));
+        dragItem.position.set(coords.x, coords.y, coords.z);
 		if (mouseAction == ROTATE) {
 			var dx = x - prevX;
 			var dy = y - prevY;
-			cube.rotateY(dx / 200);
-			cube.rotateX(dy / 200);
+			intersects[0].object.rotateY(dy/200);
+			intersects[0].object.rotateX(dx/200);
 			renderer.render(scene, camera);
-			// render();
         } else { // drag
             console.log("dragging");
 
             // TODO: this is just a quick patch 2019-06-21 21:52:13
             var dx = x - prevX;
 			var dy = y - prevY;
-			cube.translateY(-dy / 200);
-			cube.translateX(dx / 200);
+			intersects[0].object.translateY(-dy / 200);
+			intersects[0].object.translateX(dx / 200);
             renderer.render(scene, camera);
-            return;
-            
-			var a = 2 * x / document.body.width - 1;
-			var b = 1 - 2 * y / document.body.height;
-			raycaster.setFromCamera(new THREE.Vector2(a, b), camera);
-			intersects = raycaster.intersectObject(cube);
-			if (intersects.length == 0) {
-				return;
-			}
-			var locationX = intersects[0].point.x;
-			var locationZ = intersects[0].point.z;
-			var coords = new THREE.Vector3(locationX, 0, locationZ);
-			cube.worldToLocal(coords);
-			a = Math.min(19, Math.max(-19, coords.x)); // clamp coords to the range -19 to 19, so object stays on ground
-			b = Math.min(19, Math.max(-19, coords.z));
-			dragItem.position.set(a, 3, b);
-			renderer.render(scene, camera);
-			// render();
-		}
+        }
     }
     
     function doChangeMouseAction() {
 		if (document.getElementById("mouseRotate").checked) {
             mouseAction = ROTATE;
-            
-		} else if (document.getElementById("mouseDrag").checked) {
+		} else {
             mouseAction = DRAG;
-            console.log(mouseAction);
         }
-		// } else if (document.getElementById("mouseAdd").checked) {
-		// 	mouseAction = ADD;
-		// } else {
-		// 	mouseAction = DELETE;
-		// }
     }
     
     function setUpMouseHander(element, mouseDownFunc, mouseDragFunc, mouseUpFunc) {
@@ -285,10 +280,10 @@ window.onload = setTimeout(function() {
 
     // Firing it up
     var scene = new THREE.Scene();
-    // // scene.background = new THREE.Color(0xff0000);
+    scene.background = new THREE.Color("skyblue");
+    var solids = new THREE.Group()
     var mouse = new THREE.Vector3( 0, 0, 0.5);
     var mousePrevious = new THREE.Vector3( 0, 0, 0.5);
-    var raycaster = new THREE.Raycaster();
     try {
         var renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
         // renderer.setClearColor( 0xffff00, 0);
@@ -299,56 +294,111 @@ window.onload = setTimeout(function() {
             e + "</b></p>";
         return true;
     }
+    var intersects;
 
     // Camera
     var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.add(new THREE.PointLight(0xffffff,0.7));
     // var projector = new THREE.Projector();
     var orbit = new THREE.OrbitControls( camera, renderer.domElement );
     orbit.enableZoom = true;
     orbit.enableRotate = false;
+    // camera.position.z = 60;
+    // camera.position.y = 30;
+    // camera.lookAt( new THREE.Vector3(0,0,0) );
 
     // Event handlers
-    // var flag = 0;
     var ROTATE = 1;
     var DRAG = 2;
-	// var ADD = 3;
-	// var DELETE = 4;
     var mouseAction = ROTATE;
 
     document.getElementById("mouseRotate").checked = true;
     document.getElementById("mouseRotate").onchange = doChangeMouseAction;
     document.getElementById("mouseDrag").onchange = doChangeMouseAction;
-    // document.getElementById("mouseAdd").onchange = doChangeMouseAction;
-    // document.getElementById("mouseDelete").onchange = doChangeMouseAction;
     setUpMouseHander(document.body, doMouseDown, doMouseMove);
     setUpTouchHander(document.body, doMouseDown, doMouseMove);
     // document.addEventListener('mousedown', onDocumentMouseDown, false);
     // document.addEventListener('mouseup', translateObject, false);
-    // document.addEventListener("mousedown", function(){ flag = 0; }, false);
-    // document.addEventListener("mousemove", function(){ flag = 1; }, false);
 
-    // CUBE
+    // CUBES
     var geometry = new THREE.BoxGeometry(1, 1, 1);
     var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
     material.shadowSide = THREE.DoubleSide;
     // var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
     var mesh = new THREE.Mesh(geometry, material);
     // var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( {color:"yellow"}));
-    var cube = new THREE.Object3D();
-    cube.add(mesh);
+    // var cube = new THREE.Object3D();
+    // cube.add(mesh);
+
+    // targetForDragging = new THREE.Mesh(
+    //     new THREE.BoxGeometry(100,0.01,100),
+    //     new THREE.MeshBasicMaterial({color: 0xff0000})
+    // );
+    // targetForDragging.material.visible = true;
+    // // targetForDragging.material.transparent = true;
+    // targetForDragging.material.opacity = 0.2;
+    // cube.add(targetForDragging);
+
+    // var meshArray = [];
+    // meshArray.push(mesh);
+
+
+    // var geometry2 = new THREE.BoxGeometry(1, 2, 1);
+    // var material2 = new THREE.MeshBasicMaterial({color: 0x0000ff});
+    // material2.shadowSide = THREE.DoubleSide;
+    // // var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
+    // var mesh2 = new THREE.Mesh(geometry2, material2);
+    // // var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color:"yellow"}));
+    // mesh2.position.x = -2.5;
+    // var cube2 = new THREE.Object3D();
+    // cube2.add(mesh2);
+
+    // var geometry3 = new THREE.BoxGeometry(2, 1, 1);
+    // var material3 = new THREE.MeshBasicMaterial({color: 0xff0000});
+    // material3.shadowSide = THREE.DoubleSide;
+    // // var material = new THREE.MeshDepthMaterial({color: 0x00ff00});
+    // var mesh3 = new THREE.Mesh(geometry3, material3);
+    // // var mesh3 = new THREE.Mesh(geometry3, new THREE.MeshLambertMaterial({color:"red"}));
+    // mesh3.position.x = 2.5;
+    // var cube3 = new THREE.Object3D();
+    // cube3.add(mesh3);
 
     // CUBE LINES
-    var lineMaterial = new THREE.LineBasicMaterial({color: 0x000000, transparent: true, opacity: 1.0});
-    var lines = new THREE.LineSegments(geometry, lineMaterial)
-    cube.add(lines);
+    // var lineMaterial = new THREE.LineBasicMaterial({color: 0x000000, transparent: true, opacity: 1.0});
+    // var lines = new THREE.LineSegments(geometry, lineMaterial);
+    // cube.add(lines);
+    // solids.add(cube);
+
+    // var lineMaterial2 = new THREE.LineBasicMaterial({color: 0x000000, transparent: true, opacity: 1.0});
+    // var lines2 = new THREE.LineSegments(geometry2, lineMaterial2);
+    // lines2.position.x = -2.5;
+    // cube2.add(lines2);
+    // solids.add(cube2);
+
+    // var lineMaterial3 = new THREE.LineBasicMaterial({color: 0x000000, transparent: true, opacity: 1.0});
+    // var lines3 = new THREE.LineSegments(geometry3, lineMaterial3);
+    // lines3.position.x = 2.5;
+    // cube3.add(lines3);
+    // solids.add(cube3)
 
     // SPHERE
-    var sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
-    var sphereMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, transparent: true, opacity: 0.2});
-    var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    // var sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+    // var sphereMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, transparent: true, opacity: 0.2});
+    // var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+    // Material for raycasting
+    targetForDragging = new THREE.Mesh(
+        new THREE.BoxGeometry(100,0.01,100),
+        new THREE.MeshBasicMaterial({color: "black"})
+    );
+    targetForDragging.material.visible = true;
+    targetForDragging.material.transparent = true;
+    targetForDragging.material.opacity = 0.1;
+    scene.add(targetForDragging);
 
     // Building the scene
-    scene.add(cube);
+    // scene.add(solids);
+    scene.add(mesh);
     // scene.add(lines);
     // scene.add(sphere);
     // scene.add(new THREE.DirectionalLight(0x0000ff, 1));
@@ -356,14 +406,6 @@ window.onload = setTimeout(function() {
 
     var animate = function () {
         requestAnimationFrame(animate);
-
-
-
-        // cube.rotation.x += 0.01;
-        // cube.rotation.x += 0.01;
-        // lines.rotation.y += 0.01;
-        // lines.rotation.y += 0.01;
-
         renderer.render(scene, camera);
     };
 
