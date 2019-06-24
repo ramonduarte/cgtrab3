@@ -2,67 +2,47 @@
     <head>
         <title>I'm having an Arcball</title>
 
-        <!-- FIXME: full screen not working 2019-06-23 15:55:49 -->
-		<!-- <style>
-			body { margin: 0; }
-			canvas { width: 100%; height: 100% }
-        </style> -->
-
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
         <script src="js/arcball_tentative.js"></script>
-
-        <!-- FIXME: zoom controls 2019-06-23 15:57:34 -->
         <script type="module" src="js/OrbitControls.js"></script>
         
         <script>
             var canvas, scene, renderer, camera;
             var raycaster = new THREE.Raycaster();;
-            // var ground; // A square base on which the boxs stand.
-            var box, ball, inBall, ultraBall;
-            var world;
-            var ROTATE = 1, DRAG = 2, ADD = 3, DELETE = 4;
-            var mouseAction;
-            var dragItem;
-            var intersects;
-            var targetForDragging;  
+            var box, ball, inBall, ultraBall, world;
+            var ROTATE = 1, DRAG = 2, DELETE = 4;
+            var mouseAction, dragItem, intersects, targetForDragging;  
         
             function createWorld() {
                 scene = new THREE.Scene();
                 renderer.setClearColor(0x333333);
                 camera = new THREE.PerspectiveCamera(27,canvas.width/canvas.height,0.1,1000);
-                camera.position.z = 60;
-                camera.position.y = 30;
-                camera.lookAt( new THREE.Vector3(0,0,0) );
-                camera.add(new THREE.PointLight(0xffffff,0.7)); // point light at camera position
+                camera.position.z = 60; camera.position.y = 30;
+                camera.lookAt(new THREE.Vector3(0,0,0));
+                camera.add(new THREE.PointLight(0xffffff,0.7));
                 scene.add(camera);
-                scene.add(new THREE.DirectionalLight(0xffffff,0.5)); // light shining from above.
-        
+                scene.add(new THREE.DirectionalLight(0xffffff,0.5));
                 world = new THREE.Object3D();
                 scene.add(world);
 
-                // FIXME: enable scroll to zoom 2019-06-23 17:18:39
-                // var orbit = new THREE.OrbitControls(camera, renderer.domElement);
-                // orbit.enableZoom = true;
-                // orbit.enableRotate = false;
+                var orbit = new THREE.OrbitControls(camera, renderer.domElement);
+                orbit.enableZoom = true; orbit.enableRotate = false;
         
                 targetForDragging = new THREE.Mesh(new THREE.BoxGeometry(100,0.01,100), new THREE.MeshBasicMaterial());
                 targetForDragging.material.visible = false;
 
-                box = new THREE.Mesh(new THREE.BoxGeometry(3, 6, 3), new THREE.MeshLambertMaterial({color:"yellow"}));
-                box.position.y = 3;
-                box.castShadow = true;
+                box = new THREE.Mesh(new THREE.BoxGeometry(3, 6, 3), new THREE.MeshLambertMaterial({color:"gold"}));
+                box.position.y = 3; box.castShadow = true;
 
-                addBox(10,10);
-                addBox(0,15);
-                addBox(-15,-7);
-                addBox(-8,5);
-                addBox(5,-12);
+                addBox(10, 10); addBox(0, 15);
+                addBox(-15, -7); addBox(-10, -10);
+                addBox(12, 7); addBox(-8, 5);
+                addBox(5, -12); addBox(9, -12);
             }
         
             function addBox(x, z) {
                 var obj = box.clone();
-                obj.position.x = x;
-                obj.position.z = z;
+                obj.position.x = x; obj.position.z = z;
                 world.add(obj);
             }
 
@@ -70,49 +50,30 @@
                 box.geometry.computeBoundingSphere();
                 var radius = box.geometry.boundingSphere.radius + 1;
                 if (ball && box.position.distanceTo(ball.position) < 0.1) { return true; }
-                if (ball) {
-                    world.add(inBall);
-                    world.remove(ball);
-                } 
+                if (ball) { world.add(inBall); world.remove(ball); } 
                 ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), new THREE.MeshLambertMaterial({color:"red", transparent: true, opacity: 0.3}));
                 inBall = box.clone();
                 ball.position.copy(box.position);
                 box.position.copy(new THREE.Vector3(0, 0, 0));
-                world.remove(box);
-                ball.add(box);
-                world.add(ball);
+                world.remove(box); ball.add(box); world.add(ball);
+                renderer.render(scene,camera);
             }
         
             function doMouseDown(x,y) {
-                if (targetForDragging.parent == world) {
-                    world.remove(targetForDragging);
-                }
-                var a = 2*x/canvas.width - 1;
-                var b = 1 - 2*y/canvas.height;
+                if (targetForDragging.parent == world) { world.remove(targetForDragging); }
+                var a = 2*x/canvas.width - 1; var b = 1 - 2*y/canvas.height;
                 raycaster.setFromCamera(new THREE.Vector2(a,b), camera);
                 intersects = raycaster.intersectObjects(world.children);
                 if (intersects.length == 0) {
-                    // FIXME: addition of new objects 2019-06-23 17:29:02
-                    // if (mouseAction == ADD) {
-                        // var locationX = x;  // Gives the point of intersection in world coords
-                        // var locationZ = z;
-                        // var coords = new THREE.Vector3(locationX, 0, locationZ);
-                        // world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
-                        // addBox(coords.x, coords.z);
-                        // renderer.render(scene,camera);
-                    // }
+                    if (mouseAction === ROTATE && ultraBall) { world.remove(ultraBall); }
+                    if (mouseAction === ROTATE && ball) { world.remove(ball); world.add(inBall); }
+                    renderer.render(scene, camera);
                     return false;
                 }
-                var item = intersects[0];
-                var objectHit = item.object;
+                var item = intersects[0]; var objectHit = item.object;
                 switch (mouseAction) {
                     case ROTATE:
-                        if (ultraBall) {
-
-                        } else {
-                            dragItem = objectHit;
-                            addBall(dragItem);
-                        }
+                        if (ultraBall) { } else { dragItem = objectHit; addBall(dragItem); }
                         world.add(targetForDragging);
                         targetForDragging.position.set(0, item.point.y, 0);
                         renderer.render(scene,camera);
@@ -124,14 +85,6 @@
                         targetForDragging.position.set(0,item.point.y,0);
                         renderer.render(scene,camera);
                         return true;
-                    case ADD:
-                        var locationX = x;
-                        var locationZ = z;
-                        var coords = new THREE.Vector3(locationX, 0, locationZ);
-                        world.worldToLocal(coords);
-                        addBox(coords.x, coords.z);
-                        renderer.render(scene, camera);
-                        return false;
                     default:
                         world.remove(objectHit);
                         renderer.render(scene, camera);
@@ -141,9 +94,8 @@
         
             function doMouseMove(x,y,evt,prevX,prevY) {
                 if (mouseAction == ROTATE) {
-                    var dx = x - prevX;
-                    var dy = y - prevY;
-                    if (ultraBall) { world.rotateY(dx/100); }
+                    var dx = x - prevX; var dy = y - prevY;
+                    if (ultraBall) { world.rotateY(dx/100); world.rotateX(dy/100); }
                     else {
                         dragItem.rotateY(dx/100);
                         inBall.rotateY(dx/100);
@@ -152,75 +104,81 @@
                     }
                     renderer.render(scene,camera);
                 }
-                else {  // drag
+                else {
                     var a = 2*x/canvas.width - 1;
                     var b = 1 - 2*y/canvas.height;
                     raycaster.setFromCamera( new THREE.Vector2(a,b), camera );
                     intersects = raycaster.intersectObject( targetForDragging ); 
-                    if (intersects.length == 0) {
-                        return;
-                    }
+                    if (intersects.length == 0) { return; }
                     var locationX = intersects[0].point.x;
                     var locationZ = intersects[0].point.z;
                     var coords = new THREE.Vector3(locationX, 0, locationZ);
                     world.worldToLocal(coords);
-                    a = Math.min(19,Math.max(-19,coords.x));
-                    b = Math.min(19,Math.max(-19,coords.z));
+                    a = Math.min(50,Math.max(-50,coords.x));
+                    b = Math.min(50,Math.max(-50,coords.z));
                     dragItem.position.set(a,3,b);
                     renderer.render(scene,camera);
                 }
             }
             
             function doChangeMouseAction() {
-                if (document.getElementById("mouseRotate").checked) { mouseAction = ROTATE; }
+                if (document.getElementById("mouseRotate").checked) { mouseAction = ROTATE; return; }
                 else if (document.getElementById("mouseDrag").checked) { mouseAction = DRAG; }
                 else if (document.getElementById("mouseAdd").checked) { mouseAction = ADD; }
                 else { mouseAction = DELETE; }
+                if (ball) { world.add(inBall); world.remove(ball); }
+                if (ultraBall) { world.remove(ultraBall); }
+                renderer.render(scene,camera);
             }
 
             function doDoubleClick(event) {
-                var maxX = 0;
-                var minX = 0;
-                var maxZ = 0;
-                var minZ = 0;
+                if (mouseAction !== ROTATE) { return; }
+                var a = 2*event.clientX/canvas.width - 1;
+                var b = 1 - 2*event.clientY/canvas.height;
+                raycaster.setFromCamera(new THREE.Vector2(a,b), camera);
+                if (raycaster.intersectObjects(world.children).length > 0) { return true; }
+
+                var maxX = 0; var minX = 0; var maxZ = 0; var minZ = 0;
+                var aux = new THREE.Vector3();
                 world.remove(targetForDragging);
-                console.log(world);
                 world.children.forEach(i => {
                     if (i.geometry.type === "BoxGeometry") {
-                        console.log(i.position.x, i.position.z);
-                        maxX = Math.max(maxX, i.position.x);
-                        minX = Math.min(minX, i.position.x);
-                        maxZ = Math.max(maxZ, i.position.z);
-                        minZ = Math.min(minZ, i.position.z);
-                    }
-                });
+                        aux.setFromMatrixPosition(i.matrixWorld);
+                        maxX = Math.max(maxX + 3, aux.x); minX = Math.min(minX - 3, aux.x);
+                        maxZ = Math.max(maxZ + 3, aux.z); minZ = Math.min(minZ - 3, aux.z);
+                    }});
                 world.add(targetForDragging);
-                var radius = Math.max(maxX - minX, maxZ - minZ) / 2 + 6;
-                if (ultraBall) { world.remove(ultraBall);}
+                var radius = Math.max(maxX - minX, maxZ - minZ) / 2;
+                if (ultraBall) { world.remove(ultraBall); }
                 ultraBall = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), new THREE.MeshLambertMaterial({color:"blue", transparent: true, opacity: 0.3}));
-                ultraBall.position = new THREE.Vector3(minX, radius, minZ);
+                ultraBall.position = new THREE.Vector3(minX-5, radius, minZ-5);
                 world.add(ultraBall);
+                renderer.render(scene, camera);
             }
+
+            function doWheel(event) { renderer.render(scene,camera); }
+
+            var animate = function () { requestAnimationFrame(animate); renderer.render(scene, camera); };
         
             function init() {
                 try {
                     canvas = document.getElementById("maincanvas");
-                    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                    renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
                 }
                 catch (e) {
                     document.getElementById("canvas-holder").innerHTML="<p><b>Sorry, an error occurred:<br>" + e + "</b></p>";
                     return;
                 }
-                document.getElementById("mouseDrag").checked = true;
-                mouseAction = DRAG;
+                document.getElementById("mouseRotate").checked = true;
+                mouseAction = ROTATE;
                 document.getElementById("mouseRotate").onchange = doChangeMouseAction;
                 document.getElementById("mouseDrag").onchange = doChangeMouseAction;
-                document.getElementById("mouseAdd").onchange = doChangeMouseAction;
                 document.getElementById("mouseDelete").onchange = doChangeMouseAction;
-                document.addEventListener('dblclick', doDoubleClick, false);
+                document.addEventListener("dblclick", doDoubleClick, false);
+                document.addEventListener("wheel", doWheel, false);
                 createWorld();
                 setUpMouseHander(canvas,doMouseDown,doMouseMove);
-                renderer.render(scene,camera);
+                animate();
             }
         </script>
     </head>
@@ -231,7 +189,6 @@
             <p><b>Mouse Action:</b>
                 <label><input type="radio" name="action" id="mouseRotate">Rotate</label>
                 <label><input type="radio" name="action" id="mouseDrag">Drag</label>
-                <label><input type="radio" name="action" id="mouseAdd">Add</label>
                 <label><input type="radio" name="action" id="mouseDelete">Delete</label>
             </p>
             <div id="canvas-holder">

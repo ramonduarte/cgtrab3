@@ -11,15 +11,6 @@ function(callback) {
 };
 
 function setUpMouseHander(element, mouseDownFunc, mouseDragFunc, mouseUpFunc) {
-    /*
-        element -- either the element itself or a string with the id of the element
-        mouseDownFunc(x,y,evt) -- should return a boolean to indicate whether to start a drag operation
-        mouseDragFunc(x,y,evt,prevX,prevY,startX,startY)
-        mouseUpFunc(x,y,evt,prevX,prevY,startX,startY)
-    */
-    // if (typeof element == "string") {
-    //     element = document.getElementById(element);
-    // }
     var dragging = false;
     var startX, startY;
     var prevX, prevY;
