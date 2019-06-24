@@ -12,13 +12,13 @@
         <script src="js/arcball_tentative.js"></script>
 
         <!-- FIXME: zoom controls 2019-06-23 15:57:34 -->
-        <!-- <script type="module" src="js/OrbitControls.js"></script> -->
+        <script type="module" src="js/OrbitControls.js"></script>
         
         <script>
             var canvas, scene, renderer, camera;
             var raycaster;
             // var ground; // A square base on which the boxs stand.
-            var box, ball;
+            var box, ball, inBall;
             var world;
             var ROTATE = 1, DRAG = 2, ADD = 3, DELETE = 4;  // Possible mouse actions
             var mouseAction;  // currently selected mouse action
@@ -88,7 +88,7 @@
         
             }
         
-            function addBox(x,z) {
+            function addBox(x, z) {
                 var obj = box.clone();
                 obj.position.x = x;
                 obj.position.z = z;
@@ -98,13 +98,28 @@
             function addBall(box) {
                 box.geometry.computeBoundingSphere();
                 var radius = box.geometry.boundingSphere.radius + 1;
+
+                inBall = box.position.clone();
+                if (ball && inBall.distanceTo(ball.position) < 0.1) { return true; }
+                if (ball) {
+                    console.log(ball);
+                    console.log(box);
+                    // if (ball.children[0] == box) { return true; }
+                    // var oldBox = box.clone();
+                    // oldBox.position.x = box.position.x;
+                    // oldBox.position.z = box.position.z;
+                    // oldBox.rotation.copy(box.rotation);
+                    // world.add(oldBox);
+                    addBox(ball.position.x, ball.position.z);
+                    // world.remove(ball);
+                } else {
                 ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32),
                                       new THREE.MeshLambertMaterial({color:"red",
                                                                      transparent: true,
                                                                      opacity: 0.3})
                 );
+                }
                 ball.position.copy(box.position);
-                console.log(box.position, ball.position);
                 box.position.copy(new THREE.Vector3(0, 0, 0));
                 ball.add(box);
                 world.add(ball);
@@ -204,7 +219,7 @@
             }
             
             
-            function doJoyStickMove(x,y,evt,prevX,prevY) {
+            /* function doJoyStickMove(x,y,evt,prevX,prevY) {
                 if (mouseAction == ROTATE) {
                     var dx = x - prevX;
                     dragItem.rotateY( dx/200 );
@@ -227,7 +242,7 @@
                     dragItem.position.set(a+x,3,b+y);
                     render();
                 }
-            }
+            } */
         
             function doChangeMouseAction() {
                 if (document.getElementById("mouseRotate").checked) {
