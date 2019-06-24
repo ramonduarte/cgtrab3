@@ -15,30 +15,16 @@
         <!-- <script type="module" src="js/OrbitControls.js"></script> -->
         
         <script>
-
             var canvas, scene, renderer, camera;
-        
-            var raycaster;  // A THREE.Raycaster for user mouse input.
-        
-            var ground; // A square base on which the boxs stand.
-            var box;  // A box that will be cloned to make the visible boxs.
-        
-            var world;  // An Object3D that contains all the mesh objects in the scene.
-            // Rotation of the scene is done by rotating the world about its
-            // y-axis.  (I couldn't rotate the camera about the scene since
-            // the Raycaster wouldn't work with a camera that was a child
-            // of a rotated object.)
-        
+            var raycaster;
+            // var ground; // A square base on which the boxs stand.
+            var box, ball;
+            var world;
             var ROTATE = 1, DRAG = 2, ADD = 3, DELETE = 4;  // Possible mouse actions
             var mouseAction;  // currently selected mouse action
             var dragItem;  // the box that is being dragged, during a drag operation
             var intersects; //the objects intersected
-            
-            var targetForDragging;  // An invisible object that is used as the target for raycasting while
-            // dragging a box.  I use it to find the new location of the
-            // box.  I tried using the ground for this purpose, but to get
-            // the motion right, I needed a target that is at the same height
-            // above the ground as the point where the user clicked the box.
+            var targetForDragging;  
         
             function render() {  
                 renderer.render(scene,camera);
@@ -47,7 +33,7 @@
             function createWorld() {
                 scene = new THREE.Scene();
                 renderer.setClearColor(0x333333);
-                camera = new THREE.PerspectiveCamera(27,canvas.width/canvas.height,10,100);
+                camera = new THREE.PerspectiveCamera(27,canvas.width/canvas.height,0.1,1000);
                 camera.position.z = 60;
                 camera.position.y = 30;
                 camera.lookAt( new THREE.Vector3(0,0,0) );
@@ -58,12 +44,17 @@
                 world = new THREE.Object3D();
                 scene.add(world);
         
-                ground = new THREE.Mesh(
-                    new THREE.BoxGeometry(40,1,40),
-                    new THREE.MeshLambertMaterial( {color:"green"})
-                );
-                ground.position.y = -0.5;  // top of base lies in the plane y = -5;
-                world.add(ground);
+                // ground = new THREE.Mesh(
+                //     new THREE.BoxGeometry(40,1,40),
+                //     new THREE.MeshLambertMaterial( {color:"green"})
+                // );
+                // ground.position.y = -0.5;  // top of base lies in the plane y = -5;
+                // world.add(ground);
+
+                // FIXME: enable scroll to zoom 2019-06-23 17:18:39
+                // var orbit = new THREE.OrbitControls(camera, renderer.domElement);
+                // orbit.enableZoom = true;
+                // orbit.enableRotate = false;
         
                 targetForDragging = new THREE.Mesh(
                     new THREE.BoxGeometry(100,0.01,100),
@@ -80,7 +71,15 @@
                     new THREE.MeshLambertMaterial( {color:"yellow"} )
                 );
                 box.position.y = 3;  // places base at y = 0;
-        
+
+                // ball = new THREE.Mesh(
+                //     new THREE.SphereGeometry(4, 32, 32),
+                //     new THREE.MeshLambertMaterial({color:"red",
+                //                                    transparent: true,
+                //                                    opacity: 0.3})
+                // );
+                // ball.position.y = 8;  // places base at y = 0;
+
                 addBox(10,10);
                 addBox(0,15);
                 addBox(-15,-7);
@@ -95,61 +94,84 @@
                 obj.position.z = z;
                 world.add(obj);
             }
+
+            function addBall(box) {
+                box.geometry.computeBoundingSphere();
+                var radius = box.geometry.boundingSphere.radius + 1;
+                ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32),
+                                      new THREE.MeshLambertMaterial({color:"red",
+                                                                     transparent: true,
+                                                                     opacity: 0.3})
+                );
+                ball.position.copy(box.position);
+                console.log(box.position, ball.position);
+                box.position.copy(new THREE.Vector3(0, 0, 0));
+                ball.add(box);
+                world.add(ball);
+                console.log(ball);
+            }
         
             function doMouseDown(x,y) {
-                // if (mouseAction == ROTATE) {
-                //     return true;
-                // }
                 if (targetForDragging.parent == world) {
-                    world.remove(targetForDragging);  // I don't want to check for hits on targetForDragging
+                    world.remove(targetForDragging);
                 }
                 var a = 2*x/canvas.width - 1;
                 var b = 1 - 2*y/canvas.height;
-                raycaster.setFromCamera( new THREE.Vector2(a,b), camera );
-                intersects = raycaster.intersectObjects( world.children );  // no need for recusion since all objects are top-level
+                raycaster.setFromCamera(new THREE.Vector2(a,b), camera);
+                intersects = raycaster.intersectObjects(world.children);
                 if (intersects.length == 0) {
+                    // FIXME: addition of new objects 2019-06-23 17:29:02
+                    // if (mouseAction == ADD) {
+                        // var locationX = x;  // Gives the point of intersection in world coords
+                        // var locationZ = z;
+                        // var coords = new THREE.Vector3(locationX, 0, locationZ);
+                        // world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
+                        // addBox(coords.x, coords.z);
+                        // render();
+                    // }
                     return false;
                 }
                 var item = intersects[0];
                 var objectHit = item.object;
                 switch (mouseAction) {
                     case ROTATE:
-                        if (objectHit == ground) {
-                            return false;
-                        }
-                        else {
+                        // if (objectHit == ground) {
+                        //     return false;
+                        // }
+                        // else {
                             dragItem = objectHit;
+                            addBall(dragItem);
                             world.add(targetForDragging);
-                            targetForDragging.position.set(0,item.point.y,0);
+                            targetForDragging.position.set(0, item.point.y, 0);
                             render();
                             return true;
-                        }
+                        // }
                     case DRAG:
-                        if (objectHit == ground) {
-                            return false;
-                        }
-                        else {
+                        // if (objectHit == ground) {
+                        //     return false;
+                        // }
+                        // else {
                             dragItem = objectHit;
                             world.add(targetForDragging);
                             targetForDragging.position.set(0,item.point.y,0);
                             render();
                             return true;
-                        }
-                    case ADD:
-                        if (objectHit == ground) {
-                            var locationX = item.point.x;  // Gives the point of intersection in world coords
-                            var locationZ = item.point.z;
-                            var coords = new THREE.Vector3(locationX, 0, locationZ);
-                            world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
-                            addBox(coords.x, coords.z);
-                            render();
-                        }
+                        // }
+                    // case ADD:
+                        // if (objectHit == ground) {
+                            // var locationX = item.point.x;  // Gives the point of intersection in world coords
+                            // var locationZ = item.point.z;
+                            // var coords = new THREE.Vector3(locationX, 0, locationZ);
+                            // world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
+                            // addBox(coords.x, coords.z);
+                            // render();
+                        // }
                         return false;
                     default: // DELETE
-                        if (objectHit != ground) {
+                        // if (objectHit != ground) {
                             world.remove(objectHit);
                             render();
-                        }
+                        // }
                         return false;
                                                      }
             }
@@ -157,7 +179,7 @@
             function doMouseMove(x,y,evt,prevX,prevY) {
                 if (mouseAction == ROTATE) {
                     var dx = x - prevX;
-                    dragItem.rotateY( dx/100 );
+                    dragItem.rotateY(dx/100);
                     var dy = y - prevY;
                     dragItem.rotateX(dy/100);
                     render();
@@ -206,8 +228,6 @@
                     render();
                 }
             }
-            
-            
         
             function doChangeMouseAction() {
                 if (document.getElementById("mouseRotate").checked) {
@@ -219,9 +239,7 @@
                 else if (document.getElementById("mouseAdd").checked) {
                     mouseAction = ADD;
                 }
-                else {
-                    mouseAction = DELETE;
-                }
+                else { mouseAction = DELETE; }
             }
         
             function init() {
@@ -245,7 +263,6 @@
                 document.getElementById("mouseDelete").onchange = doChangeMouseAction;
                 createWorld();
                 setUpMouseHander(canvas,doMouseDown,doMouseMove);
-                setUpTouchHander(canvas,doMouseDown,doMouseMove);
                 raycaster = new THREE.Raycaster();
                 render();
             }
