@@ -17,9 +17,9 @@ function setUpMouseHander(element, mouseDownFunc, mouseDragFunc, mouseUpFunc) {
         mouseDragFunc(x,y,evt,prevX,prevY,startX,startY)
         mouseUpFunc(x,y,evt,prevX,prevY,startX,startY)
     */
-    if (typeof element == "string") {
-        element = document.getElementById(element);
-    }
+    // if (typeof element == "string") {
+    //     element = document.getElementById(element);
+    // }
     var dragging = false;
     var startX, startY;
     var prevX, prevY;
