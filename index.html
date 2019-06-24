@@ -16,7 +16,7 @@
         
         <script>
             var canvas, scene, renderer, camera;
-            var raycaster;
+            var raycaster = new THREE.Raycaster();;
             // var ground; // A square base on which the boxs stand.
             var box, ball, inBall;
             var world;
@@ -25,10 +25,6 @@
             var dragItem;  // the box that is being dragged, during a drag operation
             var intersects; //the objects intersected
             var targetForDragging;  
-        
-            function render() {  
-                renderer.render(scene,camera);
-            }
         
             function createWorld() {
                 scene = new THREE.Scene();
@@ -72,20 +68,11 @@
                 );
                 box.position.y = 3;  // places base at y = 0;
 
-                // ball = new THREE.Mesh(
-                //     new THREE.SphereGeometry(4, 32, 32),
-                //     new THREE.MeshLambertMaterial({color:"red",
-                //                                    transparent: true,
-                //                                    opacity: 0.3})
-                // );
-                // ball.position.y = 8;  // places base at y = 0;
-
                 addBox(10,10);
                 addBox(0,15);
                 addBox(-15,-7);
                 addBox(-8,5);
                 addBox(5,-12);
-        
             }
         
             function addBox(x, z) {
@@ -99,31 +86,38 @@
                 box.geometry.computeBoundingSphere();
                 var radius = box.geometry.boundingSphere.radius + 1;
 
-                inBall = box.position.clone();
-                if (ball && inBall.distanceTo(ball.position) < 0.1) { return true; }
+                if (ball && box.position.distanceTo(ball.position) < 0.1) { return true; }
                 if (ball) {
-                    console.log(ball);
-                    console.log(box);
-                    // if (ball.children[0] == box) { return true; }
+                    // inBall = ball.children[0];
+                    // console.log(inBall)
+                    // console.log(ball);
+                    // console.log(box);
                     // var oldBox = box.clone();
                     // oldBox.position.x = box.position.x;
                     // oldBox.position.z = box.position.z;
                     // oldBox.rotation.copy(box.rotation);
                     // world.add(oldBox);
-                    addBox(ball.position.x, ball.position.z);
-                    // world.remove(ball);
+                    // addBox(ball.position.x, ball.position.z);
+                    // inBall.position.x = ball.position.x;
+                    // inBall.position.z = ball.position.z;
+                    // inBall.rotation.copy(ball.rotation);
+                    world.add(inBall);
+                    // ball.children = [];
+                    world.remove(ball);
+                    // return true;
                 } else {
+                }
                 ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32),
                                       new THREE.MeshLambertMaterial({color:"red",
                                                                      transparent: true,
                                                                      opacity: 0.3})
                 );
-                }
+                inBall = box.clone();
                 ball.position.copy(box.position);
                 box.position.copy(new THREE.Vector3(0, 0, 0));
+                world.remove(box);
                 ball.add(box);
                 world.add(ball);
-                console.log(ball);
             }
         
             function doMouseDown(x,y) {
@@ -142,7 +136,7 @@
                         // var coords = new THREE.Vector3(locationX, 0, locationZ);
                         // world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
                         // addBox(coords.x, coords.z);
-                        // render();
+                        // renderer.render(scene,camera);
                     // }
                     return false;
                 }
@@ -150,17 +144,16 @@
                 var objectHit = item.object;
                 switch (mouseAction) {
                     case ROTATE:
-                        // if (objectHit == ground) {
-                        //     return false;
-                        // }
-                        // else {
+                        if (objectHit.parent === ball) {
+                            console.log("repeat ball");
+                        }
+                        // console.log(objectHit.parent);
                             dragItem = objectHit;
                             addBall(dragItem);
                             world.add(targetForDragging);
                             targetForDragging.position.set(0, item.point.y, 0);
-                            render();
+                        renderer.render(scene,camera);
                             return true;
-                        // }
                     case DRAG:
                         // if (objectHit == ground) {
                         //     return false;
@@ -169,7 +162,7 @@
                             dragItem = objectHit;
                             world.add(targetForDragging);
                             targetForDragging.position.set(0,item.point.y,0);
-                            render();
+                            renderer.render(scene,camera);
                             return true;
                         // }
                     // case ADD:
@@ -179,13 +172,13 @@
                             // var coords = new THREE.Vector3(locationX, 0, locationZ);
                             // world.worldToLocal(coords);  // to add cylider in correct position, neew local coords for the world object
                             // addBox(coords.x, coords.z);
-                            // render();
+                            // renderer.render(scene,camera);
                         // }
                         return false;
                     default: // DELETE
                         // if (objectHit != ground) {
                             world.remove(objectHit);
-                            render();
+                            renderer.render(scene,camera);
                         // }
                         return false;
                                                      }
@@ -195,9 +188,11 @@
                 if (mouseAction == ROTATE) {
                     var dx = x - prevX;
                     dragItem.rotateY(dx/100);
+                    inBall.rotateY(dx/100);
                     var dy = y - prevY;
                     dragItem.rotateX(dy/100);
-                    render();
+                    inBall.rotateX(dy/100);
+                    renderer.render(scene,camera);
                 }
                 else {  // drag
                     var a = 2*x/canvas.width - 1;
@@ -214,35 +209,9 @@
                     a = Math.min(19,Math.max(-19,coords.x));  // clamp coords to the range -19 to 19, so object stays on ground
                     b = Math.min(19,Math.max(-19,coords.z));
                     dragItem.position.set(a,3,b);
-                    render();
+                    renderer.render(scene,camera);
                 }
-            }
-            
-            
-            /* function doJoyStickMove(x,y,evt,prevX,prevY) {
-                if (mouseAction == ROTATE) {
-                    var dx = x - prevX;
-                    dragItem.rotateY( dx/200 );
-                    render();
                 }
-                else {  // drag
-                    //var a = 2*x/canvas.width - 1;
-                    //var b = 1 - 2*y/canvas.height;
-                    //raycaster.setFromCamera( new THREE.Vector2(a,b), camera );
-                    //var intersects = raycaster.intersectObject( targetForDragging ); 
-                    //if (intersects.length == 0) {
-                    //	return;
-                    //}
-                    var locationX = intersects[0].point.x;
-                    var locationZ = intersects[0].point.z;
-                    var coords = new THREE.Vector3(locationX, 0, locationZ);
-                    world.worldToLocal(coords);
-                    a = Math.min(19,Math.max(-19,coords.x));  // clamp coords to the range -19 to 19, so object stays on ground
-                    b = Math.min(19,Math.max(-19,coords.z));
-                    dragItem.position.set(a+x,3,b+y);
-                    render();
-                }
-            } */
         
             function doChangeMouseAction() {
                 if (document.getElementById("mouseRotate").checked) {
@@ -278,10 +247,8 @@
                 document.getElementById("mouseDelete").onchange = doChangeMouseAction;
                 createWorld();
                 setUpMouseHander(canvas,doMouseDown,doMouseMove);
-                raycaster = new THREE.Raycaster();
-                render();
+                renderer.render(scene,camera);
             }
-        
         </script>
     </head>
 
